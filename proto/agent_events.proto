@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package agent_observability;
+
+option go_package = "./;agent_observability";
+
+// Represents an event occurring within an agentic system.
+message AgentEvent {
+  string event_id = 1;         // Unique ID for this event
+  string timestamp = 2;        // ISO 8601 timestamp of the event
+  string agent_id = 3;         // ID of the agent emitting the event
+  string session_id = 4;       // ID of the overall interaction session
+
+  oneof event_type {
+    AgentStartEvent agent_start = 5;
+    AgentDecisionEvent agent_decision = 6;
+    ToolCallEvent tool_call = 7;
+    ToolResultEvent tool_result = 8;
+    LLMInteractionEvent llm_interaction = 9;
+    AgentEndEvent agent_end = 10;
+    CustomEvent custom_event = 11;
+  }
+}
+
+message AgentStartEvent {
+  string initial_goal = 1;
+  map<string, string> context = 2; // Initial context/parameters
+}
+
+message AgentDecisionEvent {
+  string thought = 1;              // Agent's reasoning for the decision
+  string decision_type = 2;        // e.g., "tool_call", "respond", "replan"
+  map<string, string> parameters = 3; // Parameters related to the decision
+}
+
+message ToolCallEvent {
+  string tool_name = 1;
+  string tool_input = 2;           // Serialized input to the tool
+  string call_id = 3;              // Unique ID for this specific tool call
+}
+
+message ToolResultEvent {
+  string tool_name = 1;
+  string tool_output = 2;          // Serialized output from the tool
+  string call_id = 3;              // ID of the tool call this result corresponds to
+  bool success = 4;
+  string error_message = 5;        // If success is false
+}
+
+message LLMInteractionEvent {
+  string model_name = 1;
+  string prompt = 2;
+  string response = 3;
+  map<string, string> metadata = 4; // e.g., "temperature", "max_tokens"
+}
+
+message AgentEndEvent {
+  string final_result = 1;
+  string status = 2;               // e.g., "completed", "failed"
+  string error_message = 3;        // If status is "failed"
+}
+
+message CustomEvent {
+  string event_name = 1;
+  map<string, string> properties = 2;
+}
+
+
+// Service definition for sending agent events.
+service AgentObservabilityService {
+  rpc SendEvent (AgentEvent) returns (SendEventResponse) {}
+}
+
+message SendEventResponse {
+  bool success = 1;
+  string message = 2;
+}
